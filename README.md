@@ -15,7 +15,7 @@ export MFA_BRIDGE_PATH=/tmp/mfa/swift-bridge/.build/release/libMFABridge.dylib
 # 2. Clone and run
 git clone https://github.com/imperatormk/candle-birefnet
 cd candle-birefnet
-cargo run --example infer_image --features flash-attn --release -- photo.jpg mask.png
+cargo run --example infer_image --features flash-attn --release -- examples/assets/cat.png mask.png
 ```
 
 Weights are automatically downloaded from HuggingFace on first run.
