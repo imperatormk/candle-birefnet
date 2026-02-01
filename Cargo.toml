@@ -13,7 +13,7 @@ readme = "README.md"
 candle-core = { git = "https://github.com/imperatormk/candle", branch = "main" }
 candle-nn = { git = "https://github.com/imperatormk/candle", branch = "main" }
 candle-metal-kernels = { git = "https://github.com/imperatormk/candle", branch = "main", optional = true }
-candle-mps-flash-attention = { git = "https://github.com/mpsops/candle-mps-flash-attention", optional = true }
+candle-mps-flash-attention = { git = "https://github.com/mpsops/candle-mps-flash-attention", branch = "git-candle", optional = true }
 anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 
