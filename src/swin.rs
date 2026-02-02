@@ -225,6 +225,8 @@ impl WindowAttention {
         // Try flash attention if available and on Metal
         #[cfg(feature = "flash-attn")]
         {
+            let use_flash = std::env::var("DISABLE_FLASH_ATTN").is_err();
+            if use_flash {
             if let candle_core::Device::Metal(_) = x.device() {
                 // MFA adds bias to UNSCALED scores (S = Q*K^T), then scales during softmax
                 // So we need to scale the bias by 1/scale = sqrt(head_dim) to match standard attention
@@ -252,6 +254,7 @@ impl WindowAttention {
                     let x = x.reshape((b_, n, c))?;
                     return self.proj.forward(&x);
                 }
+            }
             }
         }
 
