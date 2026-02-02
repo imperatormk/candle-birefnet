@@ -6,6 +6,11 @@ use candle_birefnet::{BiRefNet, birefnet::BiRefNetConfig};
 use std::collections::HashMap;
 use std::time::Instant;
 
+fn sync(t: &Tensor) {
+    // Force GPU sync by reading a value back to CPU
+    let _ = t.sum_all().and_then(|s| s.to_scalar::<f32>());
+}
+
 fn main() -> anyhow::Result<()> {
     let device = Device::new_metal(0)?;
     let dtype = DType::F32;
@@ -26,21 +31,21 @@ fn main() -> anyhow::Result<()> {
 
     // Warmup
     println!("\nWarmup...");
-    let _ = model.backbone.forward(&x)?;
-    if let Device::Metal(m) = &device { m.wait_until_completed()?; }
+    let warmup_out = model.backbone.forward(&x)?;
+    sync(&warmup_out[0]);
 
     // Benchmark backbone
     println!("\n=== Benchmarking backbone (single pass) ===");
     let start = Instant::now();
     let features = model.backbone.forward(&x)?;
-    if let Device::Metal(m) = &device { m.wait_until_completed()?; }
+    sync(&features[0]);
     println!("Backbone: {:?}", start.elapsed());
 
     // Benchmark half-scale backbone
     let x_half = x.upsample_bilinear2d(512, 512, true)?;
     let start = Instant::now();
-    let _ = model.backbone.forward(&x_half)?;
-    if let Device::Metal(m) = &device { m.wait_until_completed()?; }
+    let features_half = model.backbone.forward(&x_half)?;
+    sync(&features_half[0]);
     println!("Backbone (half scale): {:?}", start.elapsed());
 
     // Benchmark squeeze module
@@ -70,20 +75,20 @@ fn main() -> anyhow::Result<()> {
 
     let start = Instant::now();
     let x4_squeezed = model.squeeze_module.forward(&x4_cxt)?;
-    if let Device::Metal(m) = &device { m.wait_until_completed()?; }
+    sync(&x4_squeezed);
     println!("Squeeze module: {:?}", start.elapsed());
 
     // Benchmark decoder
     let start = Instant::now();
-    let _ = model.decoder.forward(&x, &x1_cat, &x2_cat, &x3_cat, &x4_squeezed)?;
-    if let Device::Metal(m) = &device { m.wait_until_completed()?; }
+    let decoder_out = model.decoder.forward(&x, &x1_cat, &x2_cat, &x3_cat, &x4_squeezed)?;
+    sync(&decoder_out);
     println!("Decoder: {:?}", start.elapsed());
 
     // Full inference
     println!("\n=== Full inference ===");
     let start = Instant::now();
-    let _ = model.forward_logits(&x)?;
-    if let Device::Metal(m) = &device { m.wait_until_completed()?; }
+    let logits = model.forward_logits(&x)?;
+    sync(&logits);
     println!("Total: {:?}", start.elapsed());
 
     Ok(())

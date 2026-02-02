@@ -75,8 +75,19 @@ fn main() -> anyhow::Result<()> {
     let elapsed = start.elapsed();
     println!("Inference time: {:?}", elapsed);
 
+    // Debug: check logits stats
+    let logits_min: f32 = logits.min_all()?.to_scalar()?;
+    let logits_max: f32 = logits.max_all()?.to_scalar()?;
+    let logits_mean: f32 = logits.mean_all()?.to_scalar()?;
+    println!("Logits stats - min: {:.4}, max: {:.4}, mean: {:.4}", logits_min, logits_max, logits_mean);
+
     // Apply sigmoid
     let output = candle_nn::ops::sigmoid(&logits)?;
+
+    let out_min: f32 = output.min_all()?.to_scalar()?;
+    let out_max: f32 = output.max_all()?.to_scalar()?;
+    let out_mean: f32 = output.mean_all()?.to_scalar()?;
+    println!("Output stats - min: {:.4}, max: {:.4}, mean: {:.4}", out_min, out_max, out_mean);
 
     // Convert output to image
     let mask_data: Vec<f32> = output.squeeze(0)?.squeeze(0)?.to_vec2()?

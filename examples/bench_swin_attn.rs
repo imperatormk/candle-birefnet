@@ -51,12 +51,22 @@ fn main() -> anyhow::Result<()> {
     let k = qkv_p.get(1)?;
     let v = qkv_p.get(2)?;
 
+    println!("Q shape: {:?}, contiguous: {}", q.shape(), q.is_contiguous());
+    println!("K shape: {:?}, contiguous: {}", k.shape(), k.is_contiguous());
+    println!("Q stride: {:?}", q.stride());
+    println!("K stride: {:?}", k.stride());
+
     // Q @ K^T
     let start = Instant::now();
     let k_t = k.transpose(D::Minus2, D::Minus1)?;
+    println!("K^T shape: {:?}, contiguous: {}", k_t.shape(), k_t.is_contiguous());
+    println!("K^T stride: {:?}", k_t.stride());
+    // SYNC before matmul to isolate timing
+    if let Device::Metal(m) = &device { m.wait_until_completed()?; }
+    let start = Instant::now();  // Re-start timer after sync
     let attn = q.matmul(&k_t)?;
     if let Device::Metal(m) = &device { m.wait_until_completed()?; }
-    println!("Q @ K^T: {:?}", start.elapsed());
+    println!("Q @ K^T (isolated): {:?}", start.elapsed());
 
     // Softmax
     let start = Instant::now();
